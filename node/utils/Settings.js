@@ -68,6 +68,9 @@ exports.abiword = null;
  */
 exports.loglevel = "INFO";
 
+//where to return to after visiting our openID provider
+exports.openIDReturnURL="http://localhost:9001/verify";
+
 /**
  * Http basic auth, with "user:password" format
  */

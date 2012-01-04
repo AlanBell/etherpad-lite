@@ -41,6 +41,29 @@ var padManager;
 var securityManager;
 var socketIORouter;
 
+//openid requirements
+var openid = require('openid');
+var url = require('url');
+var querystring = require('querystring');
+var extensions = [new openid.UserInterface(), 
+                  new openid.SimpleRegistration(
+                      {
+                        "fullname" : 'required',
+                      }),
+                  new openid.AttributeExchange(
+                      {
+                        "http://axschema.org/contact/email": "required",
+                        "http://axschema.org/namePerson/friendly": "required",
+                        "http://axschema.org/namePerson": "required"
+                      })];
+
+var relyingParty = new openid.RelyingParty(
+    'http://alanbell.libertus.co.uk:9001/verify', // Verification URL (yours)
+    null, // Realm (optional, specifies realm for OpenID authentication)
+    false, // Use stateless verification
+    false, // Strict mode
+    extensions); // List of extensions to enable and include
+
 //try to get the git version
 var version = "";
 try
@@ -133,7 +156,88 @@ async.waterfall([
         next();
       }
     });
-    
+    app.get('/authenticate', function(req, res, next)
+    { 
+          // User supplied identifier
+          var query = req.query;
+          var identifier = query.openid_identifier;
+
+          // Resolve identifier, associate, and build authentication URL
+          relyingParty.authenticate(identifier, false, function(error, authUrl)
+          {
+            if(error)
+            {
+              //res.writeHead(200, { 'Content-Type' : 'text/plain; charset=utf-8' });
+              //res.end('Authentication failed: ' + error.message);
+              //not authenticated, what to do now?
+              res.writeHead(302, { Location: req.cookies.loginpad });
+              res.end();
+            }
+            else if (!authUrl)
+            {
+              //not authenticated, what to do now?
+              res.writeHead(302, { Location: req.cookies.loginpad });
+              res.end();
+              //res.writeHead(200, { 'Content-Type' : 'text/plain; charset=utf-8' });
+              //res.end('Authentication failed');
+            }
+            else
+            {
+              res.writeHead(302, { Location: authUrl });
+              res.end();
+            }
+        });
+    });
+    app.get('/verify', function(req, res, next)
+    { 
+          // Verify identity assertion
+          // NOTE: Passing just the URL is also possible
+          relyingParty.verifyAssertion(req, function(error, result)
+          {
+            if(error)
+            {
+                //res.writeHead(302, { Location: req.cookies.loginpad });
+                //res.end();
+                //user probably pressed cancel on their openID page
+
+              readOnlyManager.getReadOnlyId("udspad", function(err, readonlyID)
+              {
+                if(err) {callback(err); return}
+                //lets send them to the read only version of the pad they wanted
+   
+                res.writeHead(302, { Location: "/ro/"+readonlyID });
+                res.end();
+                callback();
+              });
+            }
+            else
+            {
+              // Result contains properties:
+              // - authenticated (true/false)
+              // - answers from any extensions (e.g. 
+              //   "http://axschema.org/contact/email" if requested 
+              //   and present at provider)
+              //set the pad user name to fullname - which they might decline to provide
+              //saving the authentication results to an in-memory object in the openid object]
+              //kind of abusing the type
+              if(result.authenticated){ 
+                //so this person is authed. We kind of want to remember that for a while
+                //but probably not forever, it will be in memory so lost on a reboot
+                //we want people to stay logged in for the duration of UDS which is a week or 604800 seconds
+                openid.saveAssociation(result['claimedIdentifier'], result['fullname'], req.cookies.token, "", 604800, function(err){if(err) throw err;});
+                console.log(req.cookies.token+JSON.stringify(result));
+                console.log(req.cookies.loginpad);
+                res.writeHead(302, { Location: req.cookies.loginpad });
+                res.end();
+              }else{
+                //not authenticated, what to do now? Lets send them back to the pad anyway
+                res.writeHead(302, { Location: req.cookies.loginpad });
+                res.end();
+              }
+
+            }
+          });
+    });
     //checks for padAccess
     function hasPadAccess(req, res, callback)
     {

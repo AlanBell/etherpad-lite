@@ -24,7 +24,8 @@ var async = require("async");
 var authorManager = require("./AuthorManager");
 var padManager = require("./PadManager");
 var sessionManager = require("./SessionManager");
-var settings = require("../utils/Settings")
+var settings = require("../utils/Settings");
+var openid=require("openid");
 
 /**
  * This function controlls the access to a pad, it checks if the user can access a pad.
@@ -47,6 +48,30 @@ exports.checkAccess = function (padID, sessionID, token, password, callback)
       callback(null, {accessStatus: "deny"});
       return;
     }
+  }
+  if(padID.indexOf("uds") == 0)
+  {
+    console.log(padID.indexOf("uds"))
+    //this pad is in a namespace we want openID authentication for
+    //is this person already logged in with openID?
+    authorManager.getAuthor4Token(token, function(err, author)
+    {
+      openid.loadAssociation(token,function(err,details){
+        console.log(JSON.stringify(details));
+        if(details){
+            //here set the user name
+            // grant access, with author of token
+            authorManager.setAuthorName(author, details.type)
+            callback(err, {accessStatus: "grant", authorID: author});
+        }else{
+          //user not logged in yet, ask for their openid
+          //kind of need to store our location
+          callback(err, {accessStatus: "openid", authorID: author});
+        }
+      });
+    })
+    //don't continue
+    return;
   }
   // a session is not required, so we'll check if it's a public pad
   else

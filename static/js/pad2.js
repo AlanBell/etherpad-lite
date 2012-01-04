@@ -173,6 +173,14 @@ function savePassword()
   document.location=document.location;
 }
 
+function openIDLogin()
+{
+  //bounce to the /authenticate URL which will in turn bounce to launchpad
+  //we need to also send in the URL the place to come back to.
+  createCookie("loginpad",document.location);
+  document.location="/authenticate?openid_identifier="+"https://launchpad.net/~"+$("#lpname").val();
+}
+
 function handshake()
 {
   var loc = document.location;
@@ -265,6 +273,13 @@ function handshake()
       if(obj.accessStatus == "deny")
       {
         $("#editorloadingbox").html("<b>You do not have permission to access this pad</b>");
+      }
+      else if(obj.accessStatus == "openid")
+      {
+        $("#editorloadingbox").html("<b>You need to log in to Launchpad to edit this pad</b><br>" 
+                + "https://launchpad.net/~<input id='lpname' name='openid_identifier' />"
+                + "<button type='button' onclick='openIDLogin()'>ok</button>"
+                );
       }
       else if(obj.accessStatus == "needPassword")
       {
