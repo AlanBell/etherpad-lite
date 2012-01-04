@@ -1,0 +1,37 @@
+/*
+  You may have to use !important to override css attributs, for example:
+  
+  * {color: blue !important;}
+*/
+
+
+#chatbox{
+  background: rgba(230, 230, 230, 1);
+  width: 270px;
+  height: 300px;
+
+}
+
+#chattext
+{
+  background: none;
+}
+
+#chattext p
+{
+margin:7px;
+border-radius: 4px 4px 4px 4px;
+box-shadow: 1px 1px 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+#chatthrob{
+bottom:auto;
+top:40px;
+box-shadow: 0 0 3px 6px rgba(0, 0, 0, 0.7);
+height:auto;
+width:270px;
+}
+#users, #embed, #readonly, #importexport{
+box-shadow: 0 0 3px 6px rgba(0, 0, 0, 0.7);
+}
+body, textarea { font-family: Ubuntu, Helvetica, Arial, sans-serif; }
